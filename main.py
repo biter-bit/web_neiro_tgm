@@ -58,7 +58,7 @@ async def result_confirm(request: Request):
         await api_profile_async.update_email(invoice.profiles.id, email.lower())
 
     logger.info('4')
-    profile = await api_profile_async.update_tariff_of_profile(invoice.profiles.id, 2)
+    profile = await api_profile_async.update_subscription_profile(invoice.profiles.id, 2)
     return f"OK{inv_id}"
 
 @app.get("/success", response_class=HTMLResponse)
