@@ -5,7 +5,6 @@ from fastapi import Request
 import json
 import logging
 from db_api import api_invoice_async, api_profile_async
-from payment_app.db_api.models import Profile
 from services import robokassa_obj
 
 logging.basicConfig(level=logging.INFO)
