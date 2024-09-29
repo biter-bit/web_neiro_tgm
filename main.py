@@ -35,14 +35,14 @@ async def result_confirm(request: Request):
 
     logger.info({"query_params": query_params})
 
-    invoice = await api_invoice_async.get_invoice(query_params.get("InvId"))
+    invoice = await api_invoice_async.get_invoice(int(query_params.get("InvId")))
     if not invoice:
         logger.error(f"Not invoice ERROR | {invoice}")
         return "ERROR"
 
     logger.info('1')
     price = query_params.get("OutSum")
-    inv_id = query_params.get("InvId")
+    inv_id = int(query_params.get("InvId"))
     email = query_params.get("EMail")
     signature = query_params.get("SignatureValue")
 
