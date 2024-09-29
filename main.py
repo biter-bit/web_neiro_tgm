@@ -33,22 +33,31 @@ async def result_confirm(request: Request):
     logger.info({"request": request, "request_data": formatted_request})
     query_params = request.query_params
 
+    logger.info({"query_params": query_params})
+
     invoice = await api_invoice_async.get_invoice(query_params.get("InvId"))
     if not invoice:
         logger.error(f"Not invoice ERROR | {invoice}")
         return "ERROR"
 
+    logger.info('1')
     price = query_params.get("OutSum")
     inv_id = query_params.get("InvId")
     email = query_params.get("EMail")
     signature = query_params.get("SignatureValue")
 
+    logger.info('2')
+
     if not robokassa_obj.check_signature(inv_id=inv_id, price=price, recv_signature=signature):
         logger.error(f"Check signature ERROR | {inv_id}")
         return "Check signature ERROR"
 
+    logger.info('3')
+
     if email and invoice.profile.email != email.lower():
         await api_profile_async.update_email(invoice.profiles.id, email.lower())
+
+    logger.info('4')
     profile = await api_profile_async.update_tariff_of_profile(invoice.profiles.id, 2)
     return f"OK{inv_id}"
 
