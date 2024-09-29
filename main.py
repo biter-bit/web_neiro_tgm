@@ -49,7 +49,12 @@ async def result_confirm(request: Request):
     profile = await api_profile_async.update_tariff_of_profile(invoice.profiles.id, 2)
     return f"OK{inv_id}"
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+@app.get("/success", response_class=HTMLResponse)
+async def success_payment(request: Request):
+    formatted_request = format_request_data(request)
+    return templates.TemplateResponse("success.html", {"request": request, "request_data": formatted_request})
+
+@app.get("/fail", response_class=HTMLResponse)
+async def success_payment(request: Request):
     formatted_request = format_request_data(request)
     return templates.TemplateResponse("success.html", {"request": request, "request_data": formatted_request})
