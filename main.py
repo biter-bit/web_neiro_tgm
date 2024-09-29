@@ -29,17 +29,20 @@ def format_request_data(request):
 
 @app.get('/result', response_class=HTMLResponse)
 async def result_confirm(request: Request):
-    logger.info(request)
-    content = await request.json()
-    invoice = await api_invoice_async.get_invoice(content.get("InvId"))
+    body = await request.body()  # Получаем тело запроса
+    headers = request.headers  # Получаем заголовки запроса
+
+    logger.info(f"Request body: {body.decode('utf-8')}")  # Логируем тело
+    logger.info(f"Request headers: {headers}")  # Логируем заголовки
+    invoice = await api_invoice_async.get_invoice(headers.get("InvId"))
     if not invoice:
         logger.error(f"Not invoice ERROR | {invoice}")
         return "ERROR"
 
-    price = request.get("OutSum")
-    inv_id = request.get("InvId")
-    email = request.get("EMail")
-    signature = request.get("SignatureValue")
+    price = headers.get("OutSum")
+    inv_id = headers.get("InvId")
+    email = headers.get("EMail")
+    signature = headers.get("SignatureValue")
 
     if not robokassa_obj.check_signature(inv_id=inv_id, price=price, recv_signature=signature):
         logger.error(f"Check signature ERROR | {inv_id}")
