@@ -29,7 +29,8 @@ def format_request_data(request):
 
 @app.get('/result', response_class=HTMLResponse)
 async def result_confirm(request: Request):
-    invoice = await api_invoice_async.get_invoice(request.get("InvId"))
+    content = await request.json()
+    invoice = await api_invoice_async.get_invoice(content.get("InvId"))
     if not invoice:
         logger.error(f"Not invoice ERROR | {invoice}")
         return "ERROR"
