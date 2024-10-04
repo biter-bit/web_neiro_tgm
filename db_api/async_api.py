@@ -241,11 +241,14 @@ class ApiProfileAsync(DBApiAsync):
             await session.commit()
             return "Ok"
 
-    async def subtracting_count_request_to_model_mj(self, profile_id: int) -> str:
+    async def subtracting_count_request_to_model_mj(self, profile_id: int, version: str) -> str:
         """Вычти кол-во допустимых запросов к модели chatgpt_4o_mini на 1 для пользователя."""
         async with self.async_session_db() as session:
             profile_id = await session.get(Profile, profile_id)
-            profile_id.mj_daily_limit -= 1
+            if version == '5.2':
+                profile_id.mj_daily_limit_5_2 -= 1
+            elif version == "6.0":
+                profile_id.mj_daily_limit_6_0 -= 1
             profile_id.count_request += 1
             await session.commit()
             return "Ok"
@@ -308,7 +311,8 @@ class ApiProfileAsync(DBApiAsync):
             profile_obj.tariff_id = tariff_id
             profile_obj.chatgpt_4o_mini_daily_limit = -1
             profile_obj.chatgpt_4o_daily_limit = 50
-            profile_obj.mj_daily_limit = 35
+            profile_obj.mj_daily_limit_5_2 = 45
+            profile_obj.mj_daily_limit_6_0 = 20
             await session.commit()
             await session.refresh(profile_obj)
             return profile_obj
