@@ -7,6 +7,8 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload, selectinload
 from utils.enum import PaymentName
 from utils.enum import AiModelName
+from datetime import datetime
+from datetime import timedelta
 
 
 class DBApiAsync(DataBaseApiInterface):
@@ -310,9 +312,12 @@ class ApiProfileAsync(DBApiAsync):
             profile_obj = result.unique().scalars().first()
             profile_obj.tariff_id = tariff_id
             profile_obj.chatgpt_4o_mini_daily_limit = -1
-            profile_obj.chatgpt_4o_daily_limit = 50
+            profile_obj.chatgpt_4o_daily_limit = 100
             profile_obj.mj_daily_limit_5_2 = 45
             profile_obj.mj_daily_limit_6_0 = 20
+            profile_obj.chatgpt_o1_preview_daily_limit = 20
+            profile_obj.chatgpt_o1_mini_daily_limit = 60
+            profile_obj.date_subscription = datetime.now() + timedelta(days=30)
             await session.commit()
             await session.refresh(profile_obj)
             return profile_obj

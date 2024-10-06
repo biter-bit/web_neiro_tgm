@@ -55,7 +55,7 @@ async def result_confirm(request: Request):
     logger.info('3')
 
     if email and invoice.profile.email != email.lower():
-        await api_profile_async.update_email(invoice.profiles.id, email.lower())
+        await api_profile_async.update_email_of_profile(invoice.profiles.id, email.lower())
 
     logger.info('4')
     profile = await api_profile_async.update_subscription_profile(invoice.profiles.id, 2)
