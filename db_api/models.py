@@ -69,13 +69,24 @@ class AiModel(Base):
     """Класс представляет из себя модель нейронных сетей"""
     __tablename__ = "ai_model"
 
-    code: Mapped[str | None] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(primary_key=True)
     name: Mapped[str | None]
     type: Mapped[str | None]
     is_active: Mapped[bool | None]
 
     created_at: Mapped[created]
     updated_at: Mapped[updated]
+
+    def to_dict(self):
+        """Преобразует объект AiModel в словарь."""
+        return {
+            "code": self.code,
+            "name": self.name,
+            "type": str(self.type),
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,  # Преобразуем дату
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,  # Преобразуем дату
+        }
 
     # option: Mapped[list["AiOption"]] = relationship(
     #     back_populates="option",
@@ -105,6 +116,26 @@ class Tariff(Base):
 
     profiles: Mapped["Profile"] = relationship(back_populates="tariffs")
 
+    def to_dict(self):
+        """Преобразует объект Tariff в словарь."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "code": str(self.code),
+            "description": self.description,
+            "chatgpt_4o_daily_limit": self.chatgpt_4o_daily_limit,
+            "chatgpt_4o_mini_daily_limit": self.chatgpt_4o_mini_daily_limit,
+            "midjourney_6_0_daily_limit": self.midjourney_6_0_daily_limit,
+            "midjourney_5_2_daily_limit": self.midjourney_5_2_daily_limit,
+            "days": self.days,
+            "price_rub": self.price_rub,
+            "price_stars": self.price_stars,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,  # Преобразуем дату
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,  # Преобразуем дату
+        }
+
+
 class Profile(Base):
     """Класс представляет собой профиль пользователя бота"""
     __tablename__ = "profile"
@@ -120,10 +151,13 @@ class Profile(Base):
                                                   nullable=True, default=None)
     ai_model_id: Mapped[int | None] = mapped_column(ForeignKey("ai_model.code", ondelete='SET NULL'),
                                                  nullable=True, default="gpt-4o-mini")
-    update_daily_limits_time: Mapped[created]
+    date_subscription: Mapped[datetime.datetime] = mapped_column(nullable=True)
     chatgpt_4o_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
-    chatgpt_4o_mini_daily_limit: Mapped[Optional[int]] = mapped_column(default=30)
-    mj_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
+    chatgpt_4o_mini_daily_limit: Mapped[Optional[int]] = mapped_column(default=-1)
+    chatgpt_o1_preview_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
+    chatgpt_o1_mini_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
+    mj_daily_limit_5_2: Mapped[Optional[int]] = mapped_column(default=0)
+    mj_daily_limit_6_0: Mapped[Optional[int]] = mapped_column(default=0)
     count_request: Mapped[int | None] = mapped_column(default=0)
     # midjourney_6_0_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
     # midjourney_5_2_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
@@ -136,6 +170,32 @@ class Profile(Base):
 
     tariffs: Mapped["Tariff"] = relationship(back_populates="profiles")
     ai_models_id: Mapped["AiModel"] = relationship()
+
+    def to_dict(self):
+        """Преобразует объект Profile в словарь."""
+        return {
+            "id": str(self.id),
+            "tgid": self.tgid,
+            "username": self.username,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "email": self.email,
+            "url_telegram": self.url_telegram,
+            "tariff_id": self.tariff_id,
+            "ai_model_id": self.ai_model_id,
+            "date_subscription": self.date_subscription.isoformat() if self.date_subscription else None,
+            "chatgpt_4o_daily_limit": self.chatgpt_4o_daily_limit,
+            "chatgpt_4o_mini_daily_limit": self.chatgpt_4o_mini_daily_limit,
+            "mj_daily_limit_5_2": self.mj_daily_limit_5_2,
+            "mj_daily_limit_6_0": self.mj_daily_limit_6_0,
+            "count_request": self.count_request,
+            "is_staff": self.is_staff,
+            "is_admin": self.is_admin,
+            "created_at": self.created_at.isoformat() if self.created_at else None,  # Преобразуем дату
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,  # Преобразуем дату
+            "tariffs": self.tariffs.to_dict() if self.tariffs else None,
+            "ai_models_id": self.ai_models_id.to_dict() if self.ai_models_id else None,
+        }
 
 
 # class AiModelOptionM2M(Base):
