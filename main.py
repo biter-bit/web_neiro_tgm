@@ -64,9 +64,11 @@ async def result_confirm(request: Request):
 @app.get("/success", response_class=HTMLResponse)
 async def success_payment(request: Request):
     formatted_request = format_request_data(request)
-    return templates.TemplateResponse("success.html", {"request": request, "request_data": formatted_request})
+    # return templates.TemplateResponse("success.html", {"request": request, "request_data": formatted_request})
+    return templates.TemplateResponse("Оплата прошла успешно!")
 
 @app.get("/fail", response_class=HTMLResponse)
 async def success_payment(request: Request):
     formatted_request = format_request_data(request)
-    return templates.TemplateResponse("success.html", {"request": request, "request_data": formatted_request})
+    # return templates.TemplateResponse("success.html", {"request": request, "request_data": formatted_request})
+    return templates.TemplateResponse("Оплата не удалась.")
