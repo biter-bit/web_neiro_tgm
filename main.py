@@ -51,7 +51,7 @@ async def result_confirm(request: Request):
         return "Check signature ERROR"
 
 
-    if email and invoice.profile.email != email.lower():
+    if email and invoice.profiles.email != email.lower():
         await api_profile_async.update_email_of_profile(invoice.profiles.id, email.lower())
 
     profile = await api_profile_async.update_subscription_profile(invoice.profiles.id, 2)
