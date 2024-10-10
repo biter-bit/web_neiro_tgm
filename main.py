@@ -6,6 +6,7 @@ import json
 import logging
 from db_api import api_invoice_async, api_profile_async
 from services import robokassa_obj
+from utils.cache import set_cache_profile, serialization_profile
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -55,6 +56,7 @@ async def result_confirm(request: Request):
         await api_profile_async.update_email_of_profile(invoice.profiles.id, email.lower())
 
     profile = await api_profile_async.update_subscription_profile(invoice.profiles.id, 2)
+    await set_cache_profile(profile.tgid, await serialization_profile(profile))
     return f"OK{inv_id}"
 
 @app.get("/success", response_class=HTMLResponse)
