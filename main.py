@@ -5,6 +5,7 @@ from fastapi import Request
 import json
 import logging
 from db_api import api_invoice_async, api_profile_async
+from config import settings
 from services import robokassa_obj
 from utils.cache import set_cache_profile, serialization_profile
 
@@ -30,13 +31,9 @@ def format_request_data(request):
 
 @app.get('/result', response_class=HTMLResponse)
 async def result_confirm(request: Request):
-    formatted_request = format_request_data(request)
-    logger.info({"request": request, "request_data": formatted_request})
     query_params = request.query_params
 
-    logger.info({"query_params": query_params})
-
-    invoice = await api_invoice_async.get_invoice(int(query_params.get("InvId")))
+    invoice = await api_invoice_async.pay_invoice(int(query_params.get("InvId")))
     if not invoice:
         logger.error(f"Not invoice ERROR | {invoice}")
         return "ERROR"
@@ -55,7 +52,7 @@ async def result_confirm(request: Request):
     if email and invoice.profiles.email != email.lower():
         await api_profile_async.update_email_of_profile(invoice.profiles.id, email.lower())
 
-    profile = await api_profile_async.update_subscription_profile(invoice.profiles.id, 2)
+    profile = await api_profile_async.update_subscription_profile(invoice.profiles.id, 2, settings.RECURRING)
     await set_cache_profile(profile.tgid, await serialization_profile(profile))
     return f"OK{inv_id}"
 

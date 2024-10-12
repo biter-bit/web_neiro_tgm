@@ -1,6 +1,7 @@
 from services import redis
 import json
 from db_api.models import Profile, Tariff, AiModel
+from config import settings
 
 async def get_cache_profile(profile_tgid: int | None) -> str:
     """Получает обьект из кэша"""
@@ -9,7 +10,7 @@ async def get_cache_profile(profile_tgid: int | None) -> str:
 
 async def set_cache_profile(profile_tgid: int | None, json_profile: str) -> str:
     """Добавляет обьект в кэш"""
-    await redis.set(profile_tgid, json_profile)
+    await redis.setex(profile_tgid, settings.TTL, json_profile)
     return "Ok"
 
 async def serialization_profile(profile_obj: Profile) -> str:

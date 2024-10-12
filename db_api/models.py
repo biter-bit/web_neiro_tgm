@@ -1,11 +1,12 @@
-from email.policy import default
 import uuid
+from enum import unique
+from config import settings
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import datetime
-from sqlalchemy import text, ForeignKey, BIGINT, String, Boolean
+from sqlalchemy import text, ForeignKey, BIGINT, Boolean
 from typing import Annotated, Optional
-from utils.enum import TariffCode, AiModelName, PaymentName
+from utils.enum import TariffCode, PaymentName
 
 
 intpk = Annotated[int, mapped_column(primary_key=True)]
@@ -61,6 +62,7 @@ class Invoice(Base):
     created_at: Mapped[created]
     updated_at: Mapped[updated]
     hash_transaction: Mapped[str | None]
+    is_mother: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     profiles: Mapped["Profile"] = relationship()
     tariffs: Mapped["Tariff"] = relationship()
@@ -135,6 +137,23 @@ class Tariff(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,  # Преобразуем дату
         }
 
+class RefLink(Base):
+    """Класс представляет собой реферальные ссылки пользователей и статистику по ним"""
+    __tablename__ = "ref_link"
+
+    id: Mapped[intpk]
+    name: Mapped[Optional[str]] = mapped_column(unique=False)
+    link: Mapped[str] = mapped_column(nullable=False, unique=True)
+    count_clicks: Mapped[Optional[int]] = mapped_column(default=0)
+    count_buys: Mapped[Optional[int]] = mapped_column(default=0)
+    count_new_users: Mapped[Optional[int]] = mapped_column(default=0)
+    sum_buys: Mapped[Optional[int]] = mapped_column(default=0)
+    owner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("profile.id", ondelete='CASCADE'), nullable=False)
+
+    created_at: Mapped[created]
+    updated_at: Mapped[updated]
+
+    owner: Mapped["Profile"] = relationship(back_populates="ref_links")
 
 class Profile(Base):
     """Класс представляет собой профиль пользователя бота"""
@@ -159,8 +178,7 @@ class Profile(Base):
     mj_daily_limit_5_2: Mapped[Optional[int]] = mapped_column(default=0)
     mj_daily_limit_6_0: Mapped[Optional[int]] = mapped_column(default=0)
     count_request: Mapped[int | None] = mapped_column(default=0)
-    # midjourney_6_0_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
-    # midjourney_5_2_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
+    recurring: Mapped[bool] = mapped_column(default=False)
 
     is_staff: Mapped[bool] = mapped_column(default=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
@@ -170,6 +188,7 @@ class Profile(Base):
 
     tariffs: Mapped["Tariff"] = relationship(back_populates="profiles")
     ai_models_id: Mapped["AiModel"] = relationship()
+    ref_links: Mapped["RefLink"] = relationship(back_populates="owner")
 
     def to_dict(self):
         """Преобразует объект Profile в словарь."""
@@ -196,7 +215,6 @@ class Profile(Base):
             "tariffs": self.tariffs.to_dict() if self.tariffs else None,
             "ai_models_id": self.ai_models_id.to_dict() if self.ai_models_id else None,
         }
-
 
 # class AiModelOptionM2M(Base):
 #     """Класс представляет себя связующую таблицу опций модели и саму модель"""

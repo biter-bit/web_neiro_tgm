@@ -8,10 +8,12 @@ class Settings(BaseSettings):
     DB_PASS: str
     DB_HOST: str
     DB_PORT: int
+    TTL: int
     PATH_WORK: str = os.getcwd()
     PATH_ENV: str = f'{PATH_WORK}/.env'
     LEVEL_LOGGER: str
     TOKEN_TELEGRAM_BOT: str
+    USERNAME_BOT: str
     OPENAI_API_KEY: str
     NOT_OFFICIAL_OPENAI_API_KEY: str
     USEAPI_API_KEY: str
@@ -23,6 +25,8 @@ class Settings(BaseSettings):
     ROBOKASSA_PASS_1: str
     ROBOKASSA_PASS_2: str
     REDIS_HOST: str
+    REDIS_PORT: int
+    RECURRING: bool
     CHANNELS_IDS: list = [-1001381927809, -1001763475267]
     CHANNELS_NAMES: list = ['https://t.me/+GdDYmSqNFzI5NjEy', 'https://t.me/+YppagZY3khBjYTcy']
 
