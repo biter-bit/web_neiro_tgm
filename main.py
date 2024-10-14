@@ -5,7 +5,7 @@ from fastapi import Request
 import json
 import logging
 from db_api import api_invoice_async, api_profile_async, api_ref_link_async
-from payment_app.utils.enum import PaymentName
+from utils.enum import PaymentName
 from utils.enum import Price
 from config import settings
 from services import robokassa_obj
