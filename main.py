@@ -4,7 +4,9 @@ from fastapi.templating import Jinja2Templates
 from fastapi import Request
 import json
 import logging
-from db_api import api_invoice_async, api_profile_async
+from db_api import api_invoice_async, api_profile_async, api_ref_link_async
+from payment_app.utils.enum import PaymentName
+from utils.enum import Price
 from config import settings
 from services import robokassa_obj
 from utils.cache import set_cache_profile, serialization_profile
@@ -53,6 +55,9 @@ async def result_confirm(request: Request):
         await api_profile_async.update_email_of_profile(invoice.profiles.id, email.lower())
 
     profile = await api_profile_async.update_subscription_profile(invoice.profiles.id, 2, settings.RECURRING)
+    if profile.referal_link_id:
+        await api_ref_link_async.add_count_buy(profile.referal_link_id)
+        await api_ref_link_async.add_sum_buy(profile.referal_link_id, Price.RUB.value, PaymentName.ROBOKASSA.value)
     await set_cache_profile(profile.tgid, await serialization_profile(profile))
     return f"OK{inv_id}"
 

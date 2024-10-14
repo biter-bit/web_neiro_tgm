@@ -10,7 +10,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from utils.enum import PaymentName
 from sqlalchemy import func
 
-from utils.enum import AiModelName
+from utils.enum import AiModelName, PaymentName
 
 
 class DBApiAsync(DataBaseApiInterface):
@@ -34,7 +34,6 @@ class DBApiAsync(DataBaseApiInterface):
             await session.merge(obj)
             await session.commit()
             return "Ok"
-
 
 class ApiTextQueryAsync(DBApiAsync):
     async def save_message(self, answer: str, text_query_id):
@@ -76,6 +75,8 @@ class ApiRefLinkAsync(DBApiAsync):
             )
             session.add(ref_link)  # Добавляем объект в сессию
             await session.commit()  # Сохраняем изменения в базе данных
+            await session.refresh(ref_link)
+            return ref_link
 
     async def add_click(self, link: str) -> RefLink | None:
         """Прибавь кол-во переходов по ссылке"""
@@ -91,14 +92,73 @@ class ApiRefLinkAsync(DBApiAsync):
                 # Ссылка не найдена, обработка ситуации
                 return None
             ref_link.count_clicks += 1
-            session.commit()
-            session.refresh(ref_link)
+            await session.commit()
+            await session.refresh(ref_link)
+
+            return ref_link
+
+    async def add_count_new_users(self, link_id: int) -> RefLink | None:
+        """Прибавь кол-во переходов по ссылке"""
+        async with self.async_session_db() as session:
+            query = (
+                select(RefLink)
+                .filter_by(id=link_id)
+                .options(joinedload(RefLink.owner))
+            )
+            result = await session.execute(query)
+            ref_link = result.unique().scalars().first()
+            if ref_link is None:
+                # Ссылка не найдена, обработка ситуации
+                return None
+            ref_link.count_new_users += 1
+            await session.commit()
+            await session.refresh(ref_link)
+
+            return ref_link
+
+    async def add_count_buy(self, link_id: int) -> RefLink | None:
+        """Прибавь кол-во покупок по ссылке"""
+        async with self.async_session_db() as session:
+            query = (
+                select(RefLink)
+                .filter_by(id=link_id)
+                .options(joinedload(RefLink.owner))
+            )
+            result = await session.execute(query)
+            ref_link = result.unique().scalars().first()
+            if ref_link is None:
+                # Ссылка не найдена, обработка ситуации
+                return None
+            ref_link.count_buys += 1
+            await session.commit()
+            await session.refresh(ref_link)
+
+            return ref_link
+
+    async def add_sum_buy(self, link_id: int, sum_buy: int, category: str) -> RefLink | None:
+        """Прибавь сумму покупок по ссылке"""
+        async with self.async_session_db() as session:
+            query = (
+                select(RefLink)
+                .filter_by(id=link_id)
+                .options(joinedload(RefLink.owner))
+            )
+            result = await session.execute(query)
+            ref_link = result.unique().scalars().first()
+            if ref_link is None:
+                # Ссылка не найдена, обработка ситуации
+                return None
+            if category == PaymentName.STARS.value:
+                ref_link.sum_buys_stars += sum_buy
+            else:
+                ref_link.sum_buys_rub += sum_buy
+            await session.commit()
+            await session.refresh(ref_link)
 
             return ref_link
 
 class ApiInvoiceAsync(DBApiAsync):
-    async def create_invoice(self, profile_id: int, tariff_id: int, provider: PaymentName,
-                             is_mother: bool = False) -> Invoice:
+    async def create_invoice(self, profile_id: int, tariff_id: int, provider: PaymentName, is_mother: bool = False) -> Invoice:
         """Создай транзакцию"""
         async with self.async_session_db() as session:
             invoice_obj = Invoice(
@@ -159,7 +219,6 @@ class ApiInvoiceAsync(DBApiAsync):
             await session.refresh(invoice_obj)
             return invoice_obj
 
-
 class ApiImageQueryAsync(DBApiAsync):
     async def create_image_query(self, query: str, chat_session_id: int, jobid: str) -> ImageQuery:
         """Подготовь запрос генерации картинки"""
@@ -188,7 +247,6 @@ class ApiImageQueryAsync(DBApiAsync):
             image_query.answer = url_photo
             await session.commit()
             return "Ok"
-
 
 class ApiChatSessionAsync(DBApiAsync):
     async def get_text_messages_from_session(self, session_id: int, name_ai_model: str):
@@ -256,7 +314,6 @@ class ApiChatSessionAsync(DBApiAsync):
             chat_session.active_generation = False
             await session.commit()
             return "Ok"
-
 
 class ApiProfileAsync(DBApiAsync):
     async def replace_model_of_profile(self, profile: Profile, model: str):
@@ -328,7 +385,61 @@ class ApiProfileAsync(DBApiAsync):
             await session.refresh(profile)
             return profile
 
-    async def get_or_create_profile(self, tgid: int, username: str, first_name: str, last_name: str, url: str):
+    async def check_have_profile(self, tgid: int):
+        """Проверь есть ли пользователь в бд или нет"""
+        async with self.async_session_db() as session:
+            query = (
+                select(Profile)
+                .filter_by(tgid=tgid)
+                .options(joinedload(Profile.tariffs))
+                .options(joinedload(Profile.ai_models_id))
+            )
+            result = await session.execute(query)
+            profile = result.unique().scalars().first()
+            if profile:
+                return profile
+            return None
+
+    async def get_profile(self, tgid: int) -> Profile | None:
+        """Создай пользователя если его нет в бд"""
+        async with self.async_session_db() as session:
+            query = (
+                select(Profile)
+                .filter_by(tgid=tgid)
+                .options(joinedload(Profile.tariffs))
+                .options(joinedload(Profile.ai_models_id))
+            )
+            result = await session.execute(query)
+            profile = result.unique().scalars().first()
+            if profile:
+                return profile
+            return None
+
+    async def create_profile(self, tgid: int, username: str, first_name: str, last_name: str, url: str, referal_link_id: int = None):
+        async with self.async_session_db() as session:
+            profile = Profile(
+                username=username,
+                tgid=tgid,
+                first_name=first_name,
+                last_name=last_name,
+                url_telegram=url,
+                tariff_id=1
+            )
+            if referal_link_id:
+                profile.referal_link_id = referal_link_id
+            session.add(profile)
+            await session.commit()
+            query = (
+                select(Profile)
+                .filter_by(tgid=tgid)
+                .options(joinedload(Profile.tariffs))
+                .options(joinedload(Profile.ai_models_id))
+            )
+            result = await session.execute(query)
+            profile = result.unique().scalars().first()
+            return profile
+
+    async def get_or_create_profile(self, tgid: int, username: str, first_name: str, last_name: str, url: str, referal_link_id: int = None):
         """Создай пользователя если его нет в бд"""
         async with self.async_session_db() as session:
             query = (
@@ -348,6 +459,8 @@ class ApiProfileAsync(DBApiAsync):
                     url_telegram=url,
                     tariff_id=1
                 )
+                if referal_link_id:
+                    profile.referal_link_id = referal_link_id
                 session.add(profile)
                 await session.commit()
                 query = (
@@ -434,6 +547,7 @@ class ApiProfileAsync(DBApiAsync):
             await session.commit()
             return "Ok"
 
+
     async def update_subscription_profile(self, profile_id: int, tariff_id: int, recurring: bool = False):
         """Сделай премиум доступ для пользователя"""
         async with self.async_session_db() as session:
@@ -458,14 +572,12 @@ class ApiProfileAsync(DBApiAsync):
             await session.refresh(profile_obj)
             return profile_obj
 
-
 class ApiTariffAsync(DBApiAsync):
     async def get_tariff(self, tariff_id):
         """Получи тариф"""
         async with self.async_session_db() as session:
             tariff_obj = await session.get(Tariff, tariff_id)
             return tariff_obj
-
 
 class ApiAiModelAsync(DBApiAsync):
     async def get_all_ai_models(self) -> dict:

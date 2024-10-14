@@ -147,13 +147,15 @@ class RefLink(Base):
     count_clicks: Mapped[Optional[int]] = mapped_column(default=0)
     count_buys: Mapped[Optional[int]] = mapped_column(default=0)
     count_new_users: Mapped[Optional[int]] = mapped_column(default=0)
-    sum_buys: Mapped[Optional[int]] = mapped_column(default=0)
+    sum_buys_rub: Mapped[Optional[int]] = mapped_column(default=0)
+    sum_buys_stars: Mapped[Optional[int]] = mapped_column(default=0)
     owner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("profile.id", ondelete='CASCADE'), nullable=False)
 
     created_at: Mapped[created]
     updated_at: Mapped[updated]
 
-    owner: Mapped["Profile"] = relationship(back_populates="ref_links")
+    owner: Mapped["Profile"] = relationship(back_populates="ref_links", foreign_keys=[owner_id])
+    user_by: Mapped[list["Profile"]] = relationship(back_populates="referal_link", foreign_keys="Profile.referal_link_id")
 
 class Profile(Base):
     """Класс представляет собой профиль пользователя бота"""
@@ -179,6 +181,8 @@ class Profile(Base):
     mj_daily_limit_6_0: Mapped[Optional[int]] = mapped_column(default=0)
     count_request: Mapped[int | None] = mapped_column(default=0)
     recurring: Mapped[bool] = mapped_column(default=False)
+    referal_link_id: Mapped[int | None] = mapped_column(ForeignKey("ref_link.id", ondelete="SET NULL", use_alter=True),
+                                                        nullable=True)
 
     is_staff: Mapped[bool] = mapped_column(default=False)
     is_admin: Mapped[bool] = mapped_column(default=False)
@@ -188,7 +192,9 @@ class Profile(Base):
 
     tariffs: Mapped["Tariff"] = relationship(back_populates="profiles")
     ai_models_id: Mapped["AiModel"] = relationship()
-    ref_links: Mapped["RefLink"] = relationship(back_populates="owner")
+
+    ref_links: Mapped[list["RefLink"]] = relationship(back_populates="owner", foreign_keys="RefLink.owner_id")
+    referal_link: Mapped["RefLink"] = relationship(back_populates="user_by", foreign_keys=[referal_link_id])
 
     def to_dict(self):
         """Преобразует объект Profile в словарь."""
