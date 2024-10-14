@@ -24,9 +24,9 @@ class Settings(BaseSettings):
     ROBOKASSA_LOGIN: str
     ROBOKASSA_PASS_1: str
     ROBOKASSA_PASS_2: str
+    RECURRING: bool
     REDIS_HOST: str
     REDIS_PORT: int
-    RECURRING: bool
     CHANNELS_IDS: list = [-1001381927809, -1001763475267]
     CHANNELS_NAMES: list = ['https://t.me/+GdDYmSqNFzI5NjEy', 'https://t.me/+YppagZY3khBjYTcy']
 
