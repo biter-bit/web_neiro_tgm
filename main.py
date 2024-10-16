@@ -19,17 +19,9 @@ app = FastAPI()
 # Настройка Jinja2
 templates = Jinja2Templates(directory="templates")
 
-
-def format_request_data(request):
-    request_data = {
-        "HTTP Method": request.method,
-        "URL": str(request.url),
-        "Client IP": request.client.host,
-        "Headers": {key.decode(): value.decode() for key, value in request.headers.raw},
-        "Query Parameters": dict(request.query_params),
-        "Path Parameters": dict(request.path_params)
-    }
-    return json.dumps(request_data, indent=4, ensure_ascii=False)
+@app.get('/test', response_class=HTMLResponse)
+async def test_request(request: Request):
+    return templates.TemplateResponse("success.html", {"request": request, "request_data": "Тестовый запрос успешный!"})
 
 @app.get('/result', response_class=HTMLResponse)
 async def result_confirm(request: Request):
@@ -63,13 +55,9 @@ async def result_confirm(request: Request):
 
 @app.get("/success", response_class=HTMLResponse)
 async def success_payment(request: Request):
-    formatted_request = format_request_data(request)
-    # return templates.TemplateResponse("success.html", {"request": request, "request_data": formatted_request})
     return templates.TemplateResponse("success.html", {"request": request, "request_data": "Оплата прошла успешно!"})
 
 
 @app.get("/fail", response_class=HTMLResponse)
 async def success_payment(request: Request):
-    formatted_request = format_request_data(request)
-    # return templates.TemplateResponse("success.html", {"request": request, "request_data": formatted_request})
     return templates.TemplateResponse("success.html", {"request": request, "request_data": "Оплата не удалась."})
