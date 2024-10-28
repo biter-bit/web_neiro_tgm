@@ -1,5 +1,7 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator, model_validator
+from typing import List
 
 
 class Settings(BaseSettings):
@@ -27,8 +29,34 @@ class Settings(BaseSettings):
     RECURRING: bool
     REDIS_HOST: str
     REDIS_PORT: int
-    CHANNELS_IDS: list = [-1001381927809, -1001763475267]
-    CHANNELS_NAMES: list = ['https://t.me/+GdDYmSqNFzI5NjEy', 'https://t.me/+YppagZY3khBjYTcy']
+    CHANNELS_IDS: str
+    CHANNELS_NAMES: str
+    ADMIN_IDS: str
+
+    model_config = SettingsConfigDict(env_file=PATH_ENV)
+
+    @field_validator("ADMIN_IDS")
+    def admins_ids_change_on_list(cls, v):
+        return v.split(',')
+
+    @field_validator("CHANNELS_IDS")
+    def channels_ids_change_on_list(cls, v):
+        return list(map(int, v.split(',')))
+
+    @field_validator("CHANNELS_NAMES")
+    def admins_names_change_on_list(cls, v):
+        return v.split(',')
+
+    # @model_validator(mode="before")
+    # def admins_ids_change_on_list(cls, values):
+    #     if 'ADMIN_IDS' in values:
+    #         values['ADMIN_IDS'] = values['ADMIN_IDS'].split(',')
+    #     if "CHANNELS_IDS" in values:
+    #         print(f"Raw CHANNELS_IDS value: {values['CHANNELS_IDS']}")
+    #         values['CHANNELS_IDS'] = list(map(int, values['CHANNELS_IDS'].split(',')))
+    #     if "CHANNELS_NAMES" in values:
+    #         values['CHANNELS_NAMES'] = values['CHANNELS_NAMES'].split(',')
+    #     return values
 
     @property
     def url_connect_with_psycopg2(self):
@@ -38,8 +66,6 @@ class Settings(BaseSettings):
     @property
     def url_connect_with_asyncpg(self):
         return f'postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}'
-
-    model_config = SettingsConfigDict(env_file=PATH_ENV)
 
 
 settings = Settings()
