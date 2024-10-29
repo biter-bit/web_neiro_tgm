@@ -61,18 +61,17 @@ class ApiTextQueryAsync(DBApiAsync):
     async def get_count_query_select_text_model_ai_for_day(self, model_id):
         """Получи количество запросов выбранной модели за сутки"""
         async with self.async_session_db() as session:
-            # Вычисляем время 24 часа назад
-            last_24_hours = datetime.now() - timedelta(days=1)
+            start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             query = (
-                select(func.count(TextQuery.id))  # Подсчитываем количество записей
-                .join(ChatSession, TextQuery.chat_session_id == ChatSession.id)  # Джоин с таблицей ChatSession
-                .where(TextQuery.created_at >= last_24_hours)  # Фильтруем запросы за последние 24 часа
-                .where(ChatSession.ai_model_id == model_id)  # Фильтруем по model_id
+                select(func.count(TextQuery.id))
+                .join(ChatSession, TextQuery.chat_session_id == ChatSession.id)
+                .where(TextQuery.created_at >= start_of_day)
+                .where(ChatSession.ai_model_id == model_id)
             )
             # Выполняем запрос
             result = await session.execute(query)
-            count = result.scalar()  # Получаем количество запросов
+            count = result.scalar()
 
         return count
 
@@ -94,6 +93,18 @@ class ApiRefLinkAsync(DBApiAsync):
             session.add(ref_link)  # Добавляем объект в сессию
             await session.commit()  # Сохраняем изменения в базе данных
             await session.refresh(ref_link)
+            return ref_link
+
+    async def get_ref_link(self, link: str) -> RefLink | None:
+        """Получи реферальную ссылку."""
+        async with self.async_session_db() as session:
+            query = (
+                select(RefLink)
+                .filter_by(link=link)
+                .options(joinedload(RefLink.owner))
+            )
+            result = await session.execute(query)
+            ref_link = result.unique().scalars().first()
             return ref_link
 
     async def add_click(self, link: str) -> RefLink | None:
@@ -273,6 +284,23 @@ class ApiInvoiceAsync(DBApiAsync):
 
         return count
 
+    async def get_count_sub_for_day(self, provider):
+        async with self.async_session_db() as session:
+            start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            query = (
+                select(func.count(Invoice.profile_id))
+                .where(Invoice.is_paid == True)
+                .where(Invoice.provider == provider)
+                .where(Invoice.created_at >= start_of_day)
+                .distinct()
+            )
+            result = await session.execute(query)
+            count = result.scalar()  # Получаем количество уникальных profile_id
+            if not count:
+                return 0
+
+        return count
+
     async def get_number_of_renewals_profile(self):
         async with self.async_session_db() as session:
             # Подзапрос для поиска profile_id, у которых есть запись с is_mother=True
@@ -331,12 +359,12 @@ class ApiImageQueryAsync(DBApiAsync):
         """Получи количество запросов выбранной модели за сутки"""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            last_24_hours = datetime.now() - timedelta(days=1)
+            start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             query = (
                 select(func.count(ImageQuery.id))  # Подсчитываем количество записей
                 .join(ChatSession, ImageQuery.chat_session_id == ChatSession.id)  # Джоин с таблицей ChatSession
-                .where(ImageQuery.created_at >= last_24_hours)  # Фильтруем запросы за последние 24 часа
+                .where(ImageQuery.created_at >= start_of_day)  # Фильтруем запросы за последние 24 часа
             )
             # Выполняем запрос
             result = await session.execute(query)
@@ -415,13 +443,13 @@ class ApiChatSessionAsync(DBApiAsync):
         """Получить количество уникальных profile_id из текстовых и изображенческих запросов за последние 24 часа."""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            last_24_hours = datetime.now() - timedelta(days=1)
+            start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             # Запрос для получения profile_id из TextQuery
             text_query = (
                 select(ChatSession.profile_id)  # Выбираем только profile_id
                 .join(TextQuery, TextQuery.chat_session_id == ChatSession.id)  # Объединяем с ChatSession
-                .where(TextQuery.created_at >= last_24_hours)  # Фильтруем по времени
+                .where(TextQuery.created_at >= start_of_day)  # Фильтруем по времени
                 .distinct()
             )
 
@@ -429,7 +457,7 @@ class ApiChatSessionAsync(DBApiAsync):
             image_query = (
                 select(ChatSession.profile_id)  # Выбираем только profile_id
                 .join(ImageQuery, ImageQuery.chat_session_id == ChatSession.id)  # Объединяем с ChatSession
-                .where(ImageQuery.created_at >= last_24_hours)  # Фильтруем по времени
+                .where(ImageQuery.created_at >= start_of_day)  # Фильтруем по времени
                 .distinct()
             )
 
@@ -450,7 +478,7 @@ class ApiChatSessionAsync(DBApiAsync):
         """Получить количество уникальных profile_id из текстовых и изображенческих запросов за последние 24 часа."""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            last_month = datetime.now() - timedelta(days=30)
+            last_month = datetime.now() - timedelta(days=30) - timedelta(hours=3)
 
             # Запрос для получения profile_id из TextQuery
             text_query = (
@@ -483,21 +511,20 @@ class ApiChatSessionAsync(DBApiAsync):
 
     async def get_count_query_for_day(self):
         async with self.async_session_db() as session:
-            # Вычисляем время 24 часа назад
-            last_24_hours = datetime.now() - timedelta(days=1)
+            start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             # Запрос для получения profile_id из TextQuery
             text_query = (
                 select(ChatSession.profile_id)  # Выбираем только profile_id
                 .join(TextQuery, TextQuery.chat_session_id == ChatSession.id)  # Объединяем с ChatSession
-                .where(TextQuery.created_at >= last_24_hours)  # Фильтруем по времени
+                .where(TextQuery.created_at >= start_of_day)  # Фильтруем по времени
             )
 
             # Запрос для получения profile_id из ImageQuery
             image_query = (
                 select(ChatSession.profile_id)  # Выбираем только profile_id
                 .join(ImageQuery, ImageQuery.chat_session_id == ChatSession.id)  # Объединяем с ChatSession
-                .where(ImageQuery.created_at >= last_24_hours)  # Фильтруем по времени
+                .where(ImageQuery.created_at >= start_of_day)  # Фильтруем по времени
             )
 
             # Объединяем оба запроса
@@ -574,6 +601,21 @@ class ApiProfileAsync(DBApiAsync):
                 profile.chatgpt_o1_preview_daily_limit -= 1
             elif model_id == AiModelName.GPT_O1_MINI.value:
                 profile.chatgpt_o1_mini_daily_limit -= 1
+            await session.commit()
+            await session.refresh(profile)
+            return profile
+
+    async def add_request_count(self, profile_id: int) -> Profile:
+        """Добавь кол-во запросов пользователю."""
+        async with self.async_session_db() as session:
+            query = (
+                select(Profile)
+                .filter_by(id=profile_id)
+                .options(joinedload(Profile.tariffs))
+                .options(joinedload(Profile.ai_models_id))
+            )
+            result = await session.execute(query)
+            profile = result.unique().scalars().first()
             profile.count_request += 1
             await session.commit()
             await session.refresh(profile)
@@ -755,12 +797,12 @@ class ApiProfileAsync(DBApiAsync):
         """Получить пользователей, созданных за последние сутки"""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            last_24_hours = datetime.now() - timedelta(days=1)
+            start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             # Строим запрос для выборки пользователей с created_at больше чем last_24_hours
             query = (
                 select(func.count(Profile.id))
-                .where(Profile.created_at >= last_24_hours)
+                .where(Profile.created_at >= start_of_day)
             )
             result = await session.execute(query)
             profiles = result.scalar()
@@ -770,12 +812,12 @@ class ApiProfileAsync(DBApiAsync):
         """Получить пользователей, созданных за последние сутки"""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            last_24_hours = datetime.now() - timedelta(days=1)
+            start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             # Строим запрос для выборки пользователей с created_at больше чем last_24_hours
             query = (
                 select(func.count(Profile.id))
-                .where(Profile.created_at >= last_24_hours)
+                .where(Profile.created_at >= start_of_day)
                 .where(Profile.referal_link_id.isnot(None))
             )
             result = await session.execute(query)
@@ -852,6 +894,26 @@ class ApiTariffAsync(DBApiAsync):
                 .where(Invoice.is_paid == True)  # Только оплаченные инвойсы
                 .where(Invoice.provider == provider)  # Фильтрация по провайдеру
                 .where(Invoice.tariff_id == 2)  # Фильтрация по тарифу
+            )
+
+            result = await session.execute(query)
+            total_sum = result.scalar()  # Получаем итоговую сумму
+            if not total_sum:
+                return 0
+
+        return total_sum
+
+    async def get_sum_sub_for_day(self, provider):
+        async with self.async_session_db() as session:
+            start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            query = (
+                select(func.sum(Tariff.price_stars if provider == PaymentName.STARS.name else Tariff.price_rub))  # Суммируем price_stars
+                .select_from(Invoice)  # Явно указываем, что начинаем запрос с таблицы Invoice
+                .join(Tariff, Tariff.id == Invoice.tariff_id)  # Джоин с таблицей Tariff
+                .where(Invoice.is_paid == True)  # Только оплаченные инвойсы
+                .where(Invoice.provider == provider)  # Фильтрация по провайдеру
+                .where(Invoice.tariff_id == 2)  # Фильтрация по тарифу
+                .where(Invoice.created_at >= start_of_day)
             )
 
             result = await session.execute(query)
