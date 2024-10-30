@@ -222,12 +222,12 @@ class ApiInvoiceAsync(DBApiAsync):
             await session.refresh(invoice_obj)
             return invoice_obj
 
-    async def get_invoice_mother(self, profile_id: int) -> Invoice:
+    async def get_invoice_mother(self, profile_id: int, provider: str = PaymentName.ROBOKASSA.name) -> Invoice:
         """Получает транзакцию по ID или возвращает все транзакции пользователя"""
         async with self.async_session_db() as session:
             query = (
                 select(Invoice)
-                .filter_by(profile_id=profile_id, is_paid=True, is_mother=True)
+                .filter_by(profile_id=profile_id, is_paid=True, is_mother=True, provider=provider)
                 .options(joinedload(Invoice.profiles))
                 .options(joinedload(Invoice.tariffs))
             )
@@ -721,19 +721,7 @@ class ApiProfileAsync(DBApiAsync):
             )
             result = await session.execute(query)
             profiles = result.scalars().all()
-
-            for profile_obj in profiles:
-                # Сбрасываем тариф на 1
-                profile_obj.tariff_id = 1
-                profile_obj.chatgpt_4o_mini_daily_limit = -1
-                profile_obj.chatgpt_4o_daily_limit = 0
-                profile_obj.mj_daily_limit_5_2 = 0
-                profile_obj.mj_daily_limit_6_0 = 0
-                profile_obj.chatgpt_o1_preview_daily_limit = 0
-                profile_obj.chatgpt_o1_mini_daily_limit = 0
-
-            await session.commit()
-            return "Ok"
+            return profiles
 
     async def unsubscribe(self, profile_id: int):
         """Отмени подписку для пользователя с указанным id"""
