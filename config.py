@@ -2,6 +2,7 @@ import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator, model_validator
 from typing import List
+import json
 
 
 class Settings(BaseSettings):
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
     REDIS_PORT: int
     CHANNELS_IDS: str
     CHANNELS_NAMES: str
+    CHANNELS_INFO: str
     ADMIN_IDS: str
 
     model_config = SettingsConfigDict(env_file=PATH_ENV)
@@ -46,6 +48,10 @@ class Settings(BaseSettings):
     @field_validator("CHANNELS_NAMES")
     def admins_names_change_on_list(cls, v):
         return v.split(',')
+
+    @field_validator("CHANNELS_INFO")
+    def admins_names_change_on_list(cls, v):
+        return json.loads(v)
 
     # @model_validator(mode="before")
     # def admins_ids_change_on_list(cls, values):
