@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Optional
 
 from db_api.interface_api import DataBaseApiInterface
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -61,7 +62,8 @@ class ApiTextQueryAsync(DBApiAsync):
     async def get_count_query_select_text_model_ai_for_day(self, model_id):
         """Получи количество запросов выбранной модели за сутки"""
         async with self.async_session_db() as session:
-            start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             query = (
                 select(func.count(TextQuery.id))
@@ -286,7 +288,8 @@ class ApiInvoiceAsync(DBApiAsync):
 
     async def get_count_sub_for_day(self, provider):
         async with self.async_session_db() as session:
-            start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
             query = (
                 select(func.count(Invoice.profile_id))
                 .where(Invoice.is_paid == True)
@@ -359,7 +362,8 @@ class ApiImageQueryAsync(DBApiAsync):
         """Получи количество запросов выбранной модели за сутки"""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             query = (
                 select(func.count(ImageQuery.id))  # Подсчитываем количество записей
@@ -443,7 +447,8 @@ class ApiChatSessionAsync(DBApiAsync):
         """Получить количество уникальных profile_id из текстовых и изображенческих запросов за последние 24 часа."""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             # Запрос для получения profile_id из TextQuery
             text_query = (
@@ -478,7 +483,8 @@ class ApiChatSessionAsync(DBApiAsync):
         """Получить количество уникальных profile_id из текстовых и изображенческих запросов за последние 24 часа."""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            last_month = datetime.utcnow() - timedelta(days=30) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            last_month = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=30, hours=3)
 
             # Запрос для получения profile_id из TextQuery
             text_query = (
@@ -511,7 +517,8 @@ class ApiChatSessionAsync(DBApiAsync):
 
     async def get_count_query_for_day(self):
         async with self.async_session_db() as session:
-            start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             # Запрос для получения profile_id из TextQuery
             text_query = (
@@ -651,6 +658,18 @@ class ApiProfileAsync(DBApiAsync):
                 return profile
             return None
 
+    async def get_admin_profiles(self) -> Optional[Profile]:
+        async with self.async_session_db() as session:
+            query = (
+                select(Profile)
+                .filter_by(is_admin=True)
+                .options(joinedload(Profile.tariffs))
+                .options(joinedload(Profile.ai_models_id))
+            )
+            result = await session.execute(query)
+            profile = result.unique().scalars().all()
+            return profile
+
     async def create_profile(self, tgid: int, username: str, first_name: str, last_name: str, url: str, referal_link_id: int = None):
         async with self.async_session_db() as session:
             profile = Profile(
@@ -785,7 +804,8 @@ class ApiProfileAsync(DBApiAsync):
         """Получить пользователей, созданных за последние сутки"""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             # Строим запрос для выборки пользователей с created_at больше чем last_24_hours
             query = (
@@ -800,7 +820,8 @@ class ApiProfileAsync(DBApiAsync):
         """Получить пользователей, созданных за последние сутки"""
         async with self.async_session_db() as session:
             # Вычисляем время 24 часа назад
-            start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
 
             # Строим запрос для выборки пользователей с created_at больше чем last_24_hours
             query = (
@@ -893,7 +914,8 @@ class ApiTariffAsync(DBApiAsync):
 
     async def get_sum_sub_for_day(self, provider):
         async with self.async_session_db() as session:
-            start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
+            current_time = datetime.utcnow() + timedelta(hours=3)
+            start_of_day = current_time.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=3)
             query = (
                 select(func.sum(Tariff.price_stars if provider == PaymentName.STARS.name else Tariff.price_rub))  # Суммируем price_stars
                 .select_from(Invoice)  # Явно указываем, что начинаем запрос с таблицы Invoice
