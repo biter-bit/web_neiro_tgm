@@ -3,6 +3,22 @@ import json
 from db_api.models import Profile, Tariff, AiModel
 from config import settings
 
+
+async def remove_user_in_notification(user_tgid: int | None) -> str:
+    """Удали пользователя из списка 'Пользовательские уведомления' в redis"""
+    await redis.srem('users_notifications', user_tgid)
+    return "Ok"
+
+async def add_user_in_notification(user_tgid: int | None) -> str:
+    """Добавь пользователя в список 'Пользовательские уведомления' в redis"""
+    await redis.sadd("users_notifications", user_tgid)
+    return "Ok"
+
+async def get_users_from_notification():
+    """Получи пользователей из списка 'Пользовательские уведомления' в redis"""
+    users_notifications = await redis.smembers("users_notifications")
+    return users_notifications
+
 async def get_cache_profile(profile_tgid: int | None) -> str:
     """Получает обьект из кэша"""
     cache_value = await redis.get(profile_tgid)
