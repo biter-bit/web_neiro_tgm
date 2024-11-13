@@ -852,7 +852,10 @@ class ApiProfileAsync(DBApiAsync):
             profile_obj.mj_daily_limit_6_0 = 20
             profile_obj.chatgpt_o1_preview_daily_limit = 20
             profile_obj.chatgpt_o1_mini_daily_limit = 60
-            profile_obj.date_subscription = datetime.now() + timedelta(days=30)
+            if tariff_id == 3:
+                profile_obj.date_subscription = datetime.now() + timedelta(days=3)
+            elif tariff_id == 2:
+                profile_obj.date_subscription = datetime.now() + timedelta(days=30)
             await session.commit()
             await session.refresh(profile_obj)
             return profile_obj
