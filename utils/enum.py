@@ -409,4 +409,5 @@ class AiModelName(Enum):
 class TariffCode(Enum):
     """Класс с названиями тариффов"""
     FREE = "Free"
-    PREMIUM = "premium"
+    PREMIUM = "Premium"
+    PROMO = "Promo"
