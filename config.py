@@ -1,7 +1,6 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator, model_validator
-from typing import List
+from pydantic import field_validator
 import json
 
 

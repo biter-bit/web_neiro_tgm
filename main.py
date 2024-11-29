@@ -2,14 +2,12 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi import Request
-import json
 import logging
 from db_api import api_invoice_async, api_profile_async, api_ref_link_async
 from utils.enum import PaymentName
 from utils.enum import Price
 from config import settings
 from services import robokassa_obj
-from utils.cache import set_cache_profile, serialization_profile, remove_user_in_notification
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,18 +40,18 @@ async def result_confirm(request: Request):
         logger.error(f"Check signature ERROR | {inv_id}")
         return "Check signature ERROR"
 
-
-    # if email and invoice.profiles.email != email.lower():
-    #     await api_profile_async.update_email_of_profile(invoice.profiles.id, email.lower())
+    invoice = await api_profile_async.get_pr
+    if email and invoice.profiles.email != email.lower():
+        await api_profile_async.update_email_profile(invoice.profile_id, email.lower())
 
     profile = await api_profile_async.update_subscription_profile(
-        invoice.profiles.id, invoice.tariff_id, settings.RECURRING
+        invoice.profile_id, invoice.tariff_id, settings.RECURRING
     )
     if profile.referal_link_id:
         await api_ref_link_async.add_count_buy(profile.referal_link_id)
         await api_ref_link_async.add_sum_buy(profile.referal_link_id, Price.RUB.value, PaymentName.ROBOKASSA.value)
-    await set_cache_profile(profile.tgid, await serialization_profile(profile))
-    await remove_user_in_notification(profile.tgid)
+    # await set_cache_info(profile.tgid, await serialization_profile(profile))
+    # await remove_user_in_notification(profile.tgid)
     return f"OK{inv_id}"
 
 @app.get("/success", response_class=HTMLResponse)
