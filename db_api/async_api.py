@@ -187,7 +187,6 @@ class ApiInvoiceAsync(DBApiAsync):
         async with self.async_session_db() as session:
             invoice_mother.child_attempt_debit = 0
             await session.commit()
-            await session.refresh(invoice_mother)
             return invoice_mother
 
     async def get_invoice_mother(self, profile_id: int, provider: str = PaymentName.ROBOKASSA.name) -> Invoice:
