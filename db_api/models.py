@@ -194,7 +194,7 @@ class Profile(Base):
     ai_models_id: Mapped["AiModel"] = relationship()
 
     ref_links: Mapped[list["RefLink"]] = relationship(back_populates="owner", foreign_keys="RefLink.owner_id")
-    referal_link: Mapped["RefLink"] = relationship(back_populates="user_by", foreign_keys=[referal_link_id])
+    referral_link: Mapped["RefLink"] = relationship(back_populates="user_by", foreign_keys=[referal_link_id])
 
     def to_dict(self):
         """Преобразует объект Profile в словарь."""
