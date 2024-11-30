@@ -40,13 +40,18 @@ async def result_confirm(request: Request):
         logger.error(f"Check signature ERROR | {inv_id}")
         return "Check signature ERROR"
 
-    invoice = await api_profile_async.get_pr
+    invoice = await api_invoice_async.get_invoice(invoice_id=inv_id)
     if email and invoice.profiles.email != email.lower():
         await api_profile_async.update_email_profile(invoice.profile_id, email.lower())
+
 
     profile = await api_profile_async.update_subscription_profile(
         invoice.profile_id, invoice.tariff_id, settings.RECURRING
     )
+
+    invoice_mother = await api_invoice_async.get_invoice_mother(profile_id=profile.id)
+    await api_invoice_async.reset_attempt_debit(invoice_mother)
+
     if profile.referal_link_id:
         await api_ref_link_async.add_count_buy(profile.referal_link_id)
         await api_ref_link_async.add_sum_buy(profile.referal_link_id, Price.RUB.value, PaymentName.ROBOKASSA.value)

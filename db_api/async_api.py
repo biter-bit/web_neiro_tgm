@@ -182,14 +182,23 @@ class ApiInvoiceAsync(DBApiAsync):
             await session.refresh(invoice_obj)
             return invoice_obj
 
+    async def reset_attempt_debit(self, invoice_mother: Invoice) -> Invoice:
+        """Сбрось попытки списания счета."""
+        async with self.async_session_db() as session:
+            invoice_mother.child_attempt_debit = 0
+            await session.commit()
+            await session.refresh(invoice_mother)
+            return invoice_mother
+
     async def get_invoice_mother(self, profile_id: int, provider: str = PaymentName.ROBOKASSA.name) -> Invoice:
         """Получает транзакцию по ID или возвращает все транзакции пользователя"""
         async with self.async_session_db() as session:
             query = (
                 select(Invoice)
                 .filter_by(profile_id=profile_id, is_paid=True, is_mother=True, provider=provider)
-                .options(joinedload(Invoice.profiles))
-                .options(joinedload(Invoice.tariffs))
+                .filter(Invoice.child_attempt_debit <= 3)
+                # .options(joinedload(Invoice.profiles))
+                # .options(joinedload(Invoice.tariffs))
             )
             result = await session.execute(query)
             invoice_obj = result.unique().scalars().first()
@@ -399,8 +408,8 @@ class ApiProfileAsync(DBApiAsync):
             query = (
                 select(Profile)
                 .filter_by(tgid=tgid)
-                .options(joinedload(Profile.tariffs))
-                .options(joinedload(Profile.ai_models_id))
+                # .options(joinedload(Profile.tariffs))
+                # .options(joinedload(Profile.ai_models_id))
             )
             result = await session.execute(query)
             profile = result.unique().scalars().first()
