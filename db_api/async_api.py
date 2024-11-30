@@ -429,7 +429,7 @@ class ApiProfileAsync(DBApiAsync):
             profile = result.unique().scalars().all()
             return profile
 
-    async def create_profile(self, tgid: int, username: str, first_name: str, last_name: str, url: str, referal_link_id: int = None):
+    async def create_profile(self, tgid: int, username: str, first_name: str, last_name: str, url: str, referral_link_id: int = None):
         async with self.async_session_db() as session:
             profile = Profile(
                 username=username,
@@ -439,8 +439,8 @@ class ApiProfileAsync(DBApiAsync):
                 url_telegram=url,
                 tariff_id=1
             )
-            if referal_link_id:
-                profile.referal_link_id = referal_link_id
+            if referral_link_id:
+                profile.referral_link_id = referral_link_id
             session.add(profile)
             await session.commit()
             query = (
@@ -453,7 +453,7 @@ class ApiProfileAsync(DBApiAsync):
             profile = result.unique().scalars().first()
             return profile
 
-    async def get_or_create_profile(self, tgid: int, username: str, first_name: str, last_name: str, url: str, referal_link_id: int = None):
+    async def get_or_create_profile(self, tgid: int, username: str, first_name: str, last_name: str, url: str, referral_link_id: int = None):
         """Создай пользователя если его нет в бд"""
         async with self.async_session_db() as session:
             query = (
@@ -473,8 +473,8 @@ class ApiProfileAsync(DBApiAsync):
                     url_telegram=url,
                     tariff_id=1
                 )
-                if referal_link_id:
-                    profile.referal_link_id = referal_link_id
+                if referral_link_id:
+                    profile.referral_link_id = referral_link_id
                 session.add(profile)
                 await session.commit()
                 query = (
@@ -598,7 +598,7 @@ class ApiProfileAsync(DBApiAsync):
             query = (
                 select(func.count(Profile.id))
                 .where(Profile.created_at >= start_of_day)
-                .where(Profile.referal_link_id.isnot(None))
+                .where(Profile.referral_link_id.isnot(None))
             )
             result = await session.execute(query)
             profiles = result.scalar()

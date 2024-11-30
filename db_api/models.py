@@ -1,6 +1,4 @@
 import uuid
-from enum import unique
-from config import settings
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import datetime
@@ -22,42 +20,92 @@ updated = Annotated[
 
 class Base(DeclarativeBase):
     """Базовый класс моделей."""
-
     pass
 
+class Profile(Base):
+    """Класс представляет собой профиль пользователя бота"""
+    __tablename__ = "profile"
 
-# class AiOption(Base):
-#     """Класс представляет собой доп. настройки для нейронных сетей."""
-#
-#     __tablename__ = "ai_option"
-#
-#     id: Mapped[intpk]
-#     name: Mapped[str | None]
-#     description: Mapped[str | None]
-#
-#     # element: Mapped[str | None]
-#     # values_type: Mapped[str | None]
-#     # option_type: Mapped[str | None]
-#     # parameters: Mapped[str | None]
-#     # defaults: Mapped[str | None]
-#
-#     created_at: Mapped[created]
-#     updated_at: Mapped[updated]
-#
-#     option: Mapped[list["AiModel"]] = relationship(
-#         back_populates="option",
-#         secondary="ai_model_option"
-#     )
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tgid: Mapped[int] = mapped_column(BIGINT, unique=True)
+    username: Mapped[Optional[str]] = mapped_column(unique=False, nullable=True)
+    first_name: Mapped[str | None]
+    last_name: Mapped[str | None]
+    email: Mapped[str | None]
+    url_telegram: Mapped[str | None]
+    tariff_id: Mapped[int | None] = mapped_column(ForeignKey("tariff.id", ondelete='SET NULL'),
+                                                  nullable=True, default=None)
+    ai_model_id: Mapped[str] = mapped_column(ForeignKey("ai_model.code", ondelete='SET NULL'),
+                                                 nullable=True, default="gpt-4o-mini")
+    date_subscription: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    chatgpt_4o_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
+
+    chatgpt_4o_mini_daily_limit: Mapped[Optional[int]] = mapped_column(default=-1)
+    chatgpt_o1_preview_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
+    chatgpt_o1_mini_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
+    mj_daily_limit_5_2: Mapped[Optional[int]] = mapped_column(default=0)
+    mj_daily_limit_6_0: Mapped[Optional[int]] = mapped_column(default=0)
+    count_request: Mapped[int | None] = mapped_column(default=0)
+    recurring: Mapped[bool] = mapped_column(default=False)
+    referral_link_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ref_link.id", ondelete="SET NULL", use_alter=True),
+        nullable=True
+    )
+    is_promo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    is_staff: Mapped[bool] = mapped_column(default=False)
+    is_admin: Mapped[bool] = mapped_column(default=False)
+
+    created_at: Mapped[created]
+    updated_at: Mapped[updated]
+
+    tariff: Mapped["Tariff"] = relationship(back_populates="profiles")
+    ai_model: Mapped["AiModel"] = relationship(back_populates="choice_model_profiles")
+
+    my_ref_links: Mapped[list["RefLink"]] = relationship(back_populates="owner", foreign_keys="RefLink.owner_id")
+    referral_link: Mapped["RefLink"] = relationship(back_populates="referral_profiles", foreign_keys="Profile.referral_link_id")
+
+    # my_links: Mapped[list["RefLink"]] = relationship(back_populates="owner", foreign_keys="RefLink.owner_id")
+    # referral_link: Mapped["RefLink"] = relationship(back_populates="referral_profiles", foreign_keys="RefLink.id")
+
+    def to_dict(self):
+        """Преобразует объект Profile в словарь."""
+        return {
+            "id": str(self.id),
+            "tgid": self.tgid,
+            "username": self.username,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "email": self.email,
+            "url_telegram": self.url_telegram,
+            "tariff_id": self.tariff_id,
+            "ai_model_id": self.ai_model_id,
+            "date_subscription": self.date_subscription.isoformat() if self.date_subscription and isinstance(self.date_subscription, datetime.datetime) else None,
+            "chatgpt_4o_daily_limit": self.chatgpt_4o_daily_limit,
+            "chatgpt_4o_mini_daily_limit": self.chatgpt_4o_mini_daily_limit,
+            "mj_daily_limit_5_2": self.mj_daily_limit_5_2,
+            "mj_daily_limit_6_0": self.mj_daily_limit_6_0,
+            "count_request": self.count_request,
+            "is_staff": self.is_staff,
+            "is_admin": self.is_admin,
+            "created_at": self.created_at.isoformat() if self.created_at and isinstance(self.created_at, datetime.datetime) else None,  # Преобразуем дату
+            "updated_at": self.updated_at.isoformat() if self.updated_at and isinstance(self.updated_at, datetime.datetime) else None,  # Преобразуем дату
+            # "my_ref_links": [link.to_dict() for link in self.my_ref_links],
+            # "referral_link": self.referral_link.to_dict() if self.referral_link else None,
+            # "tariff": self.tariff.to_dict() if self.tariff else None,
+            # "ai_model": self.ai_model.to_dict() if self.ai_model else None,
+        }
 
 class Invoice(Base):
     __tablename__ = "invoice"
 
     id: Mapped[intpk]
-    profile_id: Mapped[int | None] = mapped_column(ForeignKey("profile.id", ondelete="CASCADE"),
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profile.id", ondelete="CASCADE"),
                                                    nullable=True, default=None)
     is_paid: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    tariff_id: Mapped[int | None] = mapped_column(ForeignKey("tariff.id", ondelete='SET NULL'),
+    tariff_id: Mapped[int] = mapped_column(ForeignKey("tariff.id", ondelete='SET NULL'),
                                                   nullable=True, default=None)
+    child_attempt_debit: Mapped[int] = mapped_column(default=0)
     provider: Mapped[PaymentName]
     created_at: Mapped[created]
     updated_at: Mapped[updated]
@@ -75,9 +123,12 @@ class AiModel(Base):
     name: Mapped[str | None]
     type: Mapped[str | None]
     is_active: Mapped[bool | None]
+    position_number: Mapped[int | None] = mapped_column(unique=True, default=None)
 
     created_at: Mapped[created]
     updated_at: Mapped[updated]
+
+    choice_model_profiles: Mapped[list["Profile"]] = relationship(back_populates="ai_model")
 
     def to_dict(self):
         """Преобразует объект AiModel в словарь."""
@@ -94,7 +145,6 @@ class AiModel(Base):
     #     back_populates="option",
     #     secondary="ai_model_option"
     # )
-
 
 class Tariff(Base):
     """Класс представляет собой тариф для пользования нейронными сетями"""
@@ -116,7 +166,7 @@ class Tariff(Base):
     created_at: Mapped[created]
     updated_at: Mapped[updated]
 
-    profiles: Mapped["Profile"] = relationship(back_populates="tariffs")
+    profiles: Mapped["Profile"] = relationship(back_populates="tariff")
 
     def to_dict(self):
         """Преобразует объект Tariff в словарь."""
@@ -149,96 +199,33 @@ class RefLink(Base):
     count_new_users: Mapped[Optional[int]] = mapped_column(default=0)
     sum_buys_rub: Mapped[Optional[int]] = mapped_column(default=0)
     sum_buys_stars: Mapped[Optional[int]] = mapped_column(default=0)
-    owner_id: Mapped[Optional[int]] = mapped_column(ForeignKey("profile.id", ondelete='CASCADE'), nullable=False)
+    owner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profile.id", ondelete='CASCADE'), nullable=False)
 
     created_at: Mapped[created]
     updated_at: Mapped[updated]
 
-    owner: Mapped["Profile"] = relationship(back_populates="ref_links", foreign_keys=[owner_id])
-    user_by: Mapped[list["Profile"]] = relationship(back_populates="referal_link", foreign_keys="Profile.referal_link_id")
-
-class Profile(Base):
-    """Класс представляет собой профиль пользователя бота"""
-    __tablename__ = "profile"
-
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    tgid: Mapped[int] = mapped_column(BIGINT, unique=True)
-    username: Mapped[Optional[str]] = mapped_column(unique=True)
-    first_name: Mapped[str | None]
-    last_name: Mapped[str | None]
-    email: Mapped[str | None]
-    url_telegram: Mapped[str | None]
-    tariff_id: Mapped[int | None] = mapped_column(ForeignKey("tariff.id", ondelete='SET NULL'),
-                                                  nullable=True, default=None)
-    ai_model_id: Mapped[int | None] = mapped_column(ForeignKey("ai_model.code", ondelete='SET NULL'),
-                                                 nullable=True, default="gpt-4o-mini")
-    date_subscription: Mapped[datetime.datetime] = mapped_column(nullable=True)
-    chatgpt_4o_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
-    chatgpt_4o_mini_daily_limit: Mapped[Optional[int]] = mapped_column(default=-1)
-    chatgpt_o1_preview_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
-    chatgpt_o1_mini_daily_limit: Mapped[Optional[int]] = mapped_column(default=0)
-    mj_daily_limit_5_2: Mapped[Optional[int]] = mapped_column(default=0)
-    mj_daily_limit_6_0: Mapped[Optional[int]] = mapped_column(default=0)
-    count_request: Mapped[int | None] = mapped_column(default=0)
-    recurring: Mapped[bool] = mapped_column(default=False)
-    referal_link_id: Mapped[int | None] = mapped_column(ForeignKey("ref_link.id", ondelete="SET NULL", use_alter=True),
-                                                        nullable=True)
-
-    is_staff: Mapped[bool] = mapped_column(default=False)
-    is_admin: Mapped[bool] = mapped_column(default=False)
-
-    created_at: Mapped[created]
-    updated_at: Mapped[updated]
-
-    tariffs: Mapped["Tariff"] = relationship(back_populates="profiles")
-    ai_models_id: Mapped["AiModel"] = relationship()
-
-    ref_links: Mapped[list["RefLink"]] = relationship(back_populates="owner", foreign_keys="RefLink.owner_id")
-    referral_link: Mapped["RefLink"] = relationship(back_populates="user_by", foreign_keys=[referal_link_id])
+    owner: Mapped["Profile"] = relationship(back_populates="my_ref_links", foreign_keys="RefLink.owner_id")
+    referral_profiles: Mapped[list["Profile"]] = relationship(back_populates="referral_link", foreign_keys="Profile.referral_link_id")
+    # owner: Mapped["Profile"] = relationship(back_populates="my_links", foreign_keys="Profile.id")
+    # referral_profiles: Mapped[list["Profile"]] = relationship(back_populates="referral_link", foreign_keys="Profile.referral_link_id")
 
     def to_dict(self):
-        """Преобразует объект Profile в словарь."""
+        """Преобразует обьект RefLink в словарь."""
         return {
-            "id": str(self.id),
-            "tgid": self.tgid,
-            "username": self.username,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "email": self.email,
-            "url_telegram": self.url_telegram,
-            "tariff_id": self.tariff_id,
-            "ai_model_id": self.ai_model_id,
-            "date_subscription": self.date_subscription.isoformat() if self.date_subscription else None,
-            "chatgpt_4o_daily_limit": self.chatgpt_4o_daily_limit,
-            "chatgpt_4o_mini_daily_limit": self.chatgpt_4o_mini_daily_limit,
-            "mj_daily_limit_5_2": self.mj_daily_limit_5_2,
-            "mj_daily_limit_6_0": self.mj_daily_limit_6_0,
-            "count_request": self.count_request,
-            "is_staff": self.is_staff,
-            "is_admin": self.is_admin,
-            "created_at": self.created_at.isoformat() if self.created_at else None,  # Преобразуем дату
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,  # Преобразуем дату
-            "tariffs": self.tariffs.to_dict() if self.tariffs else None,
-            "ai_models_id": self.ai_models_id.to_dict() if self.ai_models_id else None,
+            "id": self.id,
+            "name": self.name,
+            "link": self.link,
+            "count_clicks": self.count_clicks,
+            "count_buys": self.count_buys,
+            "count_new_users": self.count_new_users,
+            "sum_buys_rub": self.sum_buys_rub,
+            "sum_buys_stars": self.sum_buys_stars,
+            "owner_id": self.owner_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "owner": self.owner.to_dict() if self.owner else None,
+            "referral_profiles": [referral.to_dict() for referral in self.referral_profiles],
         }
-
-# class AiModelOptionM2M(Base):
-#     """Класс представляет себя связующую таблицу опций модели и саму модель"""
-#
-#     __tablename__ = "ai_model_option"
-#
-#     id: Mapped[intpk]
-#     ai_model_id: Mapped[str] = mapped_column(
-#         String(50),
-#         ForeignKey("ai_model.code", ondelete="CASCADE"),
-#         primary_key=True
-#     )
-#     ai_option_id: Mapped[int] = mapped_column(
-#         BIGINT,
-#         ForeignKey("ai_option.id", ondelete="CASCADE"),
-#         primary_key=True
-#     )
-
 
 class ChatSession(Base):
     """Класс представляет себя сессию чата (историю переписки с моделью)"""
@@ -247,9 +234,9 @@ class ChatSession(Base):
 
     id: Mapped[intpk]
     name: Mapped[str]
-    ai_model_id: Mapped[int | None] = mapped_column(ForeignKey("ai_model.code", ondelete="CASCADE"),
+    ai_model_id: Mapped[str] = mapped_column(ForeignKey("ai_model.code", ondelete="CASCADE"),
                                                    nullable=True, default=None)
-    profile_id: Mapped[int | None] = mapped_column(ForeignKey("profile.id", ondelete="CASCADE"),
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profile.id", ondelete="CASCADE"),
                                                   nullable=True, default=None)
     active_generation: Mapped[Optional[bool]] = mapped_column(default=False)
 
@@ -262,7 +249,17 @@ class ChatSession(Base):
     image_queries: Mapped[list["ImageQuery"]] = relationship(
         back_populates="chat_session"
     )
-
+    def to_dict(self):
+        """Преобразует объект Profile в словарь."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "ai_model_id": self.ai_model_id,
+            "profile_id": str(self.profile_id),
+            "active_generation": self.active_generation,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 class TextQuery(Base):
     """Класс представляет себя запрос, отправленный к текстовой модели и от нее"""
@@ -282,7 +279,6 @@ class TextQuery(Base):
     chat_session: Mapped["ChatSession"] = relationship(
         back_populates="text_queries"
     )
-
 
 class ImageQuery(Base):
     """Класс представляет себя запрос, отправленный к модели генерации картинки и от нее"""
@@ -304,3 +300,31 @@ class ImageQuery(Base):
     chat_session: Mapped["ChatSession"] = relationship(
         back_populates="image_queries"
     )
+
+class TariffAiModelAssociation(Base):
+    """Лимиты моделей в тарифах."""
+    __tablename__ = "tariff_ai_model_association"
+
+    tariff_id: Mapped[int] = mapped_column(ForeignKey("tariff.id", ondelete='CASCADE'), primary_key=True)
+    ai_model_id: Mapped[int] = mapped_column(ForeignKey("ai_model.code", ondelete='CASCADE'), primary_key=True)
+    quantity: Mapped[int | None] = mapped_column(default=0)
+    created_at: Mapped[created]
+    updated_at: Mapped[updated]
+
+class AiModelProfileAssociation(Base):
+    """Остаток лимитов моделей пользователей."""
+    __tablename__ = "aimodel_profile_association"
+
+    profile_id: Mapped[int] = mapped_column(ForeignKey("profile.id", ondelete='CASCADE'), primary_key=True)
+    ai_model_id: Mapped[int] = mapped_column(ForeignKey("ai_model.code", ondelete='CASCADE'), primary_key=True)
+    quantity: Mapped[int | None] = mapped_column(default=0)
+    created_at: Mapped[created]
+    updated_at: Mapped[updated]
+
+class RefLinkProfileAssociation(Base):
+    """Переходы по реферальным ссылкам."""
+    __tablename__ = "reflink_profile_association"
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("profile.id", ondelete="CASCADE"), primary_key=True)
+    ref_link_id: Mapped[int] = mapped_column(ForeignKey("ref_link.id", ondelete="CASCADE"), primary_key=True)
+    created_at: Mapped[created]
+    updated_at: Mapped[updated]
