@@ -204,20 +204,15 @@ class ApiInvoiceAsync(DBApiAsync):
             invoice_obj = result.unique().scalars().first()
             return invoice_obj
 
-    async def get_invoice(self, profile_id: int, invoice_id: int = None) -> Invoice:
+    async def get_invoice(self, invoice_id: int) -> Invoice:
         """Получает транзакцию по ID или возвращает все транзакции пользователя"""
         async with self.async_session_db() as session:
             query = (
                 select(Invoice)
-                .filter_by(profile_id=profile_id)
+                .filter_by(id=invoice_id)
                 .options(joinedload(Invoice.profiles))
                 .options(joinedload(Invoice.tariffs))
             )
-
-            # Если указан `invoice_id`, добавляем его к фильтру
-            if invoice_id is not None:
-                query = query.filter_by(id=invoice_id)
-
             result = await session.execute(query)
             invoice_obj = result.unique().scalars().first()
             return invoice_obj
